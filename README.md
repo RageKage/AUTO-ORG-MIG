@@ -1,5 +1,3 @@
-# Media Organizer
-
 This folder contains two small Python tools that keep your photo/video library clean:
 
 - `organize_media_by_month.py` — walks a library, sorts files into a consistent date-based structure, and finds duplicates.
