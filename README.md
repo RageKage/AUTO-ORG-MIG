@@ -1,14 +1,16 @@
-This folder contains two small Python tools that keep your photo/video library clean:
+# Media Organizer (Desktop ➜ SSD)
 
-- `organize_media_by_month.py` — walks a library, sorts files into a consistent date-based structure, and finds duplicates.
-- `migrate_media_to_SSD.py` — moves the organized months (and `_duplicates`) from your main drive to an external SSD.
+Two Python scripts work together to keep your photo/video library organized:
+
+- `organize_media_by_month.py` – sorts everything in `_inbox` into a clean date-based structure.
+- `migrate_media_to_SSD.py` – copies organized months from your Desktop to the SSD.
 
 ---
 
 ## 1. Requirements
 
-- Python 3 installed (macOS already has it, but `python3` must work in Terminal).
-- The Pillow library for reading EXIF data:
+- Python 3 (run with `python3` on macOS).
+- Pillow for EXIF dates:
 
   ```bash
   pip3 install pillow
@@ -16,89 +18,75 @@ This folder contains two small Python tools that keep your photo/video library c
 
 ---
 
-## 2. Folder layout
+## 2. Folder layout (after organizing)
 
-When you run `organize_media_by_month.py` on a root folder (for example `/Users/fadel/Desktop/Pictures`), it will:
+When you run `organize_media_by_month.py` on your Pictures folder (for example `/Users/fadel/Desktop/Pictures`), anything in `_inbox` is moved into:
 
-- Create or update this structure:
+```text
+Pictures/
+  2025-07/
+    2025-07-28/
+      jpeg/
+      raw/
+      video/
+  _inbox/
+```
 
-  ```
-  Pictures/
-    2025-07/
-      2025-07-28/
-        jpeg/
-        raw/
-        geo/
-          jpeg/
-          raw/
-        video/
-    _duplicates/
-    _inbox/
-  ```
+- `YYYY-MM/` – one folder per month  
+- `YYYY-MM-DD/` – one folder per shooting day inside each month  
+- `jpeg/` – JPEG/PNG images  
+- `raw/` – RAW files (`.raf`, `.cr2`, `.nef`, `.dng`, `.arw`, `.rw2`, `.orf`)  
+- `video/` – video files (`.mp4`, `.mov`, `.m4v`, `.avi`, `.mts`, `.m2ts`)  
+- `_inbox/` – drop new media here; the script moves it out into the right date folders
 
-### What each folder means
-
-- `YYYY-MM/` — one folder per month.
-- `YYYY-MM-DD/` — one folder per shooting day inside each month.
-- `jpeg/` — JPEG/PNG images without GPS data.
-- `raw/` — RAW files (`.raf`, `.cr2`, `.nef`, `.dng`, `.arw`, `.rw2`, `.orf`) without GPS data.
-- `geo/jpeg/` and `geo/raw/` — images that *do* have GPS EXIF data.
-- `video/` — video files (`.mp4`, `.mov`, `.m4v`, `.avi`, `.mts`, `.m2ts`) for that day.
-- `_duplicates/` — exact duplicates (detected by SHA‑256 hash). Safe place to review and delete later.
-- `_inbox/` — a drop box. Anything you put here that has a supported extension will be organized on the next run.
+Files like `.log`, `.txt`, `.psd`, etc. are ignored.
 
 ---
 
-## 3. What gets organized?
-
-The organizer only touches files with these extensions:
-
-- Images: `.jpg`, `.jpeg`, `.jpe`, `.tif`, `.tiff`, `.heic`, `.png`
-- RAW: `.raf`, `.cr2`, `.nef`, `.dng`, `.arw`, `.rw2`, `.orf`
-- Video: `.mp4`, `.mov`, `.m4v`, `.avi`, `.mts`, `.m2ts`
-
-Files like `.log`, `.txt`, `.psd`, etc. are ignored and left where they are.
-
-Anything with a supported extension that you drop into `_inbox/` will be picked up, dated by its EXIF capture time (or file modified time as a fallback), and moved into the correct month/day folder.
-
----
-
-## 4. Running the organizer
+## 3. Daily workflow (Desktop)
 
 From this folder (`Org`) in Terminal:
 
-```bash
-python3 organize_media_by_month.py "/Users/fadel/Desktop/Pictures"
-```
+1. **Drop new media into `_inbox`:**
 
-You can safely run this multiple times. The script:
+   Copy/import new photos and videos into:
 
-- Skips files already in the correct target folder.
-- Detects exact duplicates by content hash and moves them to `_duplicates/`.
-- Cleans up any old empty `no-geo` folders from the previous layout.
+   ```text
+   /Users/fadel/Desktop/Pictures/_inbox
+   ```
 
-Recommended workflow:
+2. **Organize on Desktop:**
 
-1. Import or copy new media into `Pictures/_inbox/`.
-2. Run the organizer command above.
-3. Review `_duplicates/` occasionally and delete what you don’t need.
+   ```bash
+   python3 organize_media_by_month.py "/Users/fadel/Desktop/Pictures"
+   ```
+
+   This:
+   - Looks only inside `_inbox`
+   - Figures out dates from EXIF (or file modified time)
+   - Moves files into `YYYY-MM/YYYY-MM-DD/jpeg|raw|video`
+   - Leaves already-organized months alone
 
 ---
 
-## 5. Migrating to the SSD
+## 4. Migrate to SSD (Portal)
 
-Once your `Pictures` folder is organized, you can move the month folders and `_duplicates` to your external SSD (e.g., the `Portal` drive):
+After organizing on the Desktop, copy new months/files to the SSD:
 
 ```bash
-python3 migrate_media_to_SSD.py "/Users/fadel/Desktop/Pictures" "/Volumes/Portal/Pictures"
+python3 migrate_media_to_SSD.py \
+  "/Users/fadel/Desktop/Pictures" \
+  "/Volumes/Portal/Pictures"
 ```
 
 This script:
+- Treats `/Users/fadel/Desktop/Pictures` as the **master** library
+- Treats `/Volumes/Portal/Pictures` as the **SSD archive**
+- Syncs top-level `YYYY-MM` folders:
+  - If a month is new on the SSD → copy the whole folder
+  - If a month already exists → only copy files that are missing
+- Never deletes anything on Desktop or SSD
 
-- Moves all top‑level month folders (`YYYY-MM`) and `_duplicates` from the source root to the destination root.
-- Leaves `_inbox` and any other non‑month folders in place on your main drive.
-- Prints each move so you can see what happened.
-
-You can run `organize_media_by_month.py` on either location (internal drive or SSD), as long as you point it at the correct root folder.
-
----
+You can run both scripts as many times as you want:
+- `organize_media_by_month.py` keeps sorting whatever is in `_inbox`
+- `migrate_media_to_SSD.py` keeps the SSD updated with new months/files
